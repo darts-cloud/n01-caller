@@ -1,0 +1,17 @@
+{
+  "name": "n01 Caller",
+  "version": "0.1.1",
+  "manifest_version": 3,
+  "description": "この拡張機能は、n01のサイトで入力された点数を読み上げる。n01から獲得点数を取得し、点数に応じたmp3を再生する。",
+  "content_scripts": [{
+    "matches": ["https://nakka.com/n01/*"],
+    "js": ["jquery-3.6.0.min.js", "content.js"]
+  }],
+  "web_accessible_resources": [{
+    "resources": [ "*.mp3" ],
+    "matches": [ "<all_urls>" ]
+  }],
+  "host_permissions": [
+    "https://nakka.com/n01/*"
+  ]
+}

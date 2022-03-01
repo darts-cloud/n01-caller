@@ -1,8 +1,11 @@
 /* ========================================== 
 
-  【製造残】
-
-
+  【Bug】
+・最終ラウンド以外に上がり目が来ると、ゲームショットと言わない。
+・発生ON／OFできるようにする。
+・ゲームONの判断いらない。
+・Player1 Win
+・音声認識版も作る？
 ============================================ */
 
 class Caller {
@@ -243,39 +246,62 @@ class SoundCaller extends Caller {
 
     constructor() {
         super();
+        this.queue = [];
+        this.sound = new Audio();
+        this.playFlg = false;
+        
+        let obj = this;
+        this.sound.addEventListener("ended", function() {
+            obj.playFlg = false;
+            obj.playSound();
+        }, false);
     }
-
+    
     init() {
         super.init();
     }
-
-    playSound(name) {
-        // var url = chrome.runtime.getURL(`${name}.mp3`);
-        var url = chrome.runtime.getURL(`/voice/${name}.m4a`);
-        var music = new Audio(url);
-        music.play();
+    
+    addSound(name) {
+        var url = chrome.runtime.getURL(`/voice/${name}.mp3`);
+        this.queue.push(url);
+        this.playSound();
+    }
+    playSound() {
+//        var url = chrome.runtime.getURL(`/voice/${name}.mp3`);
+//        var sound = new Audio(url);
+        if (this.playFlg) {
+            return;
+        }
+        if (this.queue.length > 0) {
+            this.playFlg = true;
+            this.sound.src = this.queue.shift();
+            // this.sound.load();
+            this.sound.play();
+        } else {
+            this.playFlg = false;
+        }
     }
 
     callGameOn() {
-	    this.playSound("GameOn");
+	    this.addSound("GameOn");
     }
     
     callGameShot () {
-	    this.playSound("GameShot");
+	    this.addSound("GameShot");
     }
     
     callPoint(point) {
-	    this.playSound(point);
+	    this.addSound(point);
     }
     callYouRequire(point) {
-	    this.playSound("require");
-	    this.playSound(point);
+	    this.addSound("you_require");
+	    this.addSound(point);
     }
 }
 
 $(function(){
-    // var caller = new SpeechCaller();
-    var caller = new SoundCaller();
+    var caller = new SpeechCaller();
+    // var caller = new SoundCaller();
 
 	setInterval(function() {
     	caller.analsys();

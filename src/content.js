@@ -1,9 +1,6 @@
 /* ========================================== 
-
-  【Bug】
-・最終ラウンド以外に上がり目が来ると、ゲームショットと言わない。
+  [[[TODO]]]
 ・発生ON／OFできるようにする。
-・Player1 Win
 ・音声認識版も作る？
 ============================================ */
 
@@ -39,6 +36,14 @@ class Caller {
     
     getRequirePoint(round, player) {
         return $(`.score_left[round=${round-1}][player=${player}]`).text();
+    }
+    
+    isGameshot() {
+        return $('.score_input:contains("x")').length != 0;
+    }
+    
+    getWinPlayer() {
+        return $('.score_input:contains("x")').attr("player");
     }
     
     getLatestRound() {
@@ -86,14 +91,27 @@ class Caller {
         if (!this.isLoaded()) {
             return;
         }
+        if (this.isGameshot()) {
+            if (this.gameShotFlg) {
+                return;
+            }
+            // Game Shot
+            let pl = this.getWinPlayer();
+            this.callGameShot(pl);
+            this.gameShotFlg = true;
+            return ;
+        }
+
+        this.gameShotFlg = false;
+        
         let round = this.getRound();
         let player = this.getPlayer();
         let latestRound = this.getLatestRound();
+        
         if (round != latestRound) {
             return;
         }
 
-        // alert(`${this.prev_legs} != ${legs} && ${round} == 0`);
         if (this.prev_legs != legs && round == 0) {
             // new leg
             this.init();
@@ -102,23 +120,8 @@ class Caller {
             this.callGameOn();
         }
         
-        if (this.prev_round == round && this.prev_player == player) {
+        if (this.prev_round != round || this.prev_player != player) {
             
-            let point = this.getPoint(round, player);
-
-            if (point == 'x1' || point == 'x2' || point == 'x3') {
-                if (this.gameShotFlg) {
-                    return;
-                }
-                // Game Shot
-                this.callGameShot();
-                this.gameShotFlg = true;
-            } else {
-                this.gameShotFlg = false;
-            }
-
-        } else {
-
             let point = this.getPoint(this.prev_round, this.prev_player);
             if (point == "") {
                 this.sets(round, player);
@@ -129,7 +132,7 @@ class Caller {
             this.callPoint(point);
             
             point = this.getRequirePoint(round, player);
-            if (canDoubleOut(point) {
+            if (this.canDoubleOut(point)) {
                 // Call Require Point
                 this.callYouRequire(point);
             }
@@ -139,6 +142,9 @@ class Caller {
     }
     
     canDoubleOut (point) {
+        if (point == "") {
+            return false;
+        }
         if (point < 0 || 170 < point) {
             return false;
         }
@@ -172,8 +178,8 @@ class Caller {
         alert("GameOn");
     }
     
-    callGameShot () {
-        alert("GameOn");
+    callGameShot(player) {
+        alert("GameShot");
     }
     
     callPoint(point) {
@@ -243,11 +249,17 @@ class SpeechCaller extends Caller {
         this.call(speak);
     }
     
-    callGameShot () {
+    callGameShot (player) {
         let speak = this.getSpeechSynthesisUtterance();
         speak.rate  = 0.50;
         speak.volume = 1.50;
-        speak.text = "Game Shot!";
+        let pl = "";
+        if (player == 0) {
+            pl = "player1";
+        } else {
+            pl = "player2";
+        }
+        speak.text = `Game Shot!Won by ${pl}`;
         this.call(speak);
     }
     
@@ -314,8 +326,14 @@ class SoundCaller extends Caller {
         this.addSound("GameOn");
     }
     
-    callGameShot () {
-        this.addSound("GameShot");
+    callGameShot (player) {
+        let pl = "";
+        if (player == 0) {
+            pl = "player1";
+        } else {
+            pl = "player2";
+        }
+        this.addSound(`GameShot`);
     }
     
     callPoint(point) {
@@ -328,8 +346,8 @@ class SoundCaller extends Caller {
 }
 
 $(function(){
-    // var caller = new SpeechCaller();
-    var caller = new SoundCaller();
+    let caller = new SpeechCaller();
+    // let caller = new SoundCaller();
 
     setInterval(function() {
         caller.analsys();

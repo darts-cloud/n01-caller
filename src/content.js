@@ -3,7 +3,6 @@
   【Bug】
 ・最終ラウンド以外に上がり目が来ると、ゲームショットと言わない。
 ・発生ON／OFできるようにする。
-・ゲームONの判断いらない。
 ・Player1 Win
 ・音声認識版も作る？
 ============================================ */
@@ -98,10 +97,9 @@ class Caller {
         if (this.prev_legs != legs && round == 0) {
             // new leg
             this.init();
-            if($('.input_area').length > 0) {
-                // next game start
-                this.callGameOn();
-            }
+
+            // next game start
+            this.callGameOn();
         }
         
         if (this.prev_round == round && this.prev_player == player) {
@@ -121,36 +119,67 @@ class Caller {
 
         } else {
 
-	        let point = this.getPoint(this.prev_round, this.prev_player);
+            let point = this.getPoint(this.prev_round, this.prev_player);
             if (point == "") {
                 this.sets(round, player);
                 return;
             }
-	        
+            
             // Call Point
             this.callPoint(point);
             
             point = this.getRequirePoint(round, player);
-            if (0 < point && point <= 170) {
-                if (point != 169 && point != 168 && point != 166 && point != 165 && point != 163 && point != 162 && point != 159) {
-                    // Call Require Point
-                    this.callYouRequire(point);
-                }
+            if (canDoubleOut(point) {
+                // Call Require Point
+                this.callYouRequire(point);
             }
 
             this.sets(round, player);
         }
     }
     
+    canDoubleOut (point) {
+        if (point < 0 || 170 < point) {
+            return false;
+        }
+        
+        if (point == 169 || point == 168 ||
+            point == 166 || point == 165 ||
+            point == 163 || point == 162 || point == 159) {
+            return false;
+        }
+        
+        return true;
+    }
+
+    canLoad(_url) {
+        try {
+            let xhr;
+            xhr = new XMLHttpRequest();
+            xhr.open("HEAD", _url, false);  //同期モード
+            xhr.send(null);
+            return xhr.status;
+        }  catch(e) {
+            return 404;
+        }
+    }
+    
+    /* ======================== */
+    /* override functions
+    /* ======================== */
+    
     callGameOn () {
         alert("GameOn");
     }
+    
     callGameShot () {
         alert("GameOn");
     }
+    
     callPoint(point) {
         alert(point);
     }
+    
     callYouRequire(point) {
         alert(`you require ${point}`)
     }
@@ -248,11 +277,9 @@ class SoundCaller extends Caller {
         super();
         this.queue = [];
         this.sound = new Audio();
-        this.playFlg = false;
         
         let obj = this;
         this.sound.addEventListener("ended", function() {
-            obj.playFlg = false;
             obj.playSound();
         }, false);
     }
@@ -262,48 +289,49 @@ class SoundCaller extends Caller {
     }
     
     addSound(name) {
-        var url = chrome.runtime.getURL(`/voice/${name}.mp3`);
+        let url = chrome.runtime.getURL(`/voice/${name}.mp3`);
         this.queue.push(url);
         this.playSound();
     }
     playSound() {
-//        var url = chrome.runtime.getURL(`/voice/${name}.mp3`);
-//        var sound = new Audio(url);
-        if (this.playFlg) {
+        if (this.sound.src != "" && !this.sound.ended) {
             return;
         }
         if (this.queue.length > 0) {
-            this.playFlg = true;
-            this.sound.src = this.queue.shift();
-            // this.sound.load();
-            this.sound.play();
-        } else {
-            this.playFlg = false;
+            let url = this.queue.shift();
+            let status = this.canLoad(url);
+            console.log("url:", url);
+            console.log("status:", status);
+            if (status == 200) {
+                this.sound.src = url;
+                // this.sound.load();
+                this.sound.play();
+            }
         }
     }
 
     callGameOn() {
-	    this.addSound("GameOn");
+        this.addSound("GameOn");
     }
     
     callGameShot () {
-	    this.addSound("GameShot");
+        this.addSound("GameShot");
     }
     
     callPoint(point) {
-	    this.addSound(point);
+        this.addSound(point);
     }
     callYouRequire(point) {
-	    this.addSound("you_require");
-	    this.addSound(point);
+        this.addSound("you_require");
+        this.addSound(point);
     }
 }
 
 $(function(){
-    var caller = new SpeechCaller();
-    // var caller = new SoundCaller();
+    // var caller = new SpeechCaller();
+    var caller = new SoundCaller();
 
-	setInterval(function() {
-    	caller.analsys();
+    setInterval(function() {
+        caller.analsys();
     } ,500);
 });

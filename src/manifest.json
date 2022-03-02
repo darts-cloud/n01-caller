@@ -8,8 +8,8 @@
     "js": ["jquery-3.6.0.min.js", "content.js"]
   }],
   "web_accessible_resources": [{
-    "resources": [ "voice/*.mp3" ],
-    "matches": [ "<all_urls>" ]
+    "matches": [ "<all_urls>" ],
+    "resources": [ "voice/*.mp3" ]
   }],
   "host_permissions": [
     "https://nakka.com/n01/*"

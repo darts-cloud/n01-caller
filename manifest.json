@@ -5,7 +5,7 @@
   "description": "n01のサイトで入力された点数を読み上げます。",
   "content_scripts": [{
     "matches": ["https://nakka.com/n01/*"],
-    "js": ["jquery-3.6.0.min.js", "content.js"]
+    "js": ["js/jquery-3.6.0.min.js", "js/n01-caller.js"]
   }],
   "web_accessible_resources": [{
     "resources": [ "voice/*.mp3" ],

@@ -50,8 +50,12 @@ class Caller {
         return $('.score_input:contains("x")').length != 0;
     }
     
+    getGameshotRound() {
+        return parseInt($('.score_input:contains("x")').attr("round"));
+    }
+    
     getWinPlayer() {
-        return $('.score_input:contains("x")').attr("player");
+        return parseInt($('.score_input:contains("x")').attr("player"));
     }
     
     getLatestRound() {
@@ -348,18 +352,27 @@ class SoundCaller extends Caller {
     }
     
     callGameShot (player) {
-        let pl = "";
-        if (player == 0) {
-            pl = "player1";
-        } else {
-            pl = "player2";
+        let round = this.getGameshotRound() + 1;
+        if (round <= 6) {
+            this.addSound(`gameshot9`);
+            return;
         }
-        this.addSound(`GameShot`);
+        let point = this.getRequirePoint(round - 1, player);
+        if (point >= 100) {
+            this.addSound("gameshoth");
+        } else {
+            this.addSound("gameshot");
+        }
     }
     
     callPoint(point) {
-        this.addSound(point);
+        if (point >= 100) {
+            this.addSound(`${point}h`);
+        } else {
+            this.addSound(`${point}`);
+        }
     }
+
     callYouRequire(point) {
         this.addSound("you_require");
         this.addSound(point);
@@ -509,17 +522,17 @@ class SoundCallerEx extends SoundCaller {
         this.queue = [];
         this.speech = new SpeechSynthesisSound();
         let obj = this;
-        this.speech.addEventListener("start", function() {
-            obj.isCalling = true;
-        });
+//        this.speech.addEventListener("start", function() {
+//            obj.isCalling = true;
+//        });
         this.speech.addEventListener("next", function() {
             obj.isCalling = false;
             obj.call();
         });
         this.sound  = new VoiceSound();
-        this.sound.addEventListener("start", function() {
-            obj.isCalling = true;
-        });
+//        this.sound.addEventListener("start", function() {
+//            obj.isCalling = true;
+//        });
         this.sound.addEventListener("next", function() {
             obj.isCalling = false;
             obj.call();
@@ -567,20 +580,25 @@ class SoundCallerEx extends SoundCaller {
 
     callGameOn(p1Name, p2Name) {
         if(this.isFirstLeg()) {
-            this.addSpeechSynthesis(`${p1Name} vs ${p2Name}`);
+            if (p1Name == "Player 1") {
+                this.addSound("player1");
+            } else {
+                this.addSpeechSynthesis(`${p1Name}`);
+            }
+            
+            this.addSpeechSynthesis("vs");
+            
+            if (p2Name == "Player 2") {
+                this.addSound("player2");
+            } else {
+                this.addSpeechSynthesis(`${p2Name}`);
+            }
         }
-        this.addSound("GameOn");
+        this.addSound("gameon");
     }
 
     callGameShot (player) {
-        let pl = "";
-        if (player == 0) {
-            pl = "player1";
-        } else {
-            pl = "player2";
-        }
-        this.addSound(`GameShot!`);
-        this.addSpeechSynthesis(`Won by ${pl}!`);
+        super.callGameShot(player);
     }
 
 }

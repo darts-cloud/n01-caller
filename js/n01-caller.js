@@ -4,6 +4,137 @@
 ・音声認識版も作る？
 ============================================ */
 
+class Sound {
+    
+    constructor() {
+        this.listeners = {};
+    }
+    
+    trigger(method, payload = null) {
+        const callback = this.listeners[method];
+        if(typeof callback === 'function'){
+            callback(payload);
+        }
+    }
+    
+    addEventListener(method, callback) {
+        this.listeners[method] = callback;
+    }
+
+    removeEventListener (method) {
+        delete this.listeners[method];
+    }
+
+    canLoad(_url) {
+        try {
+            let xhr;
+            xhr = new XMLHttpRequest();
+            xhr.open("HEAD", _url, false);  //同期モード
+            xhr.send(null);
+            return xhr.status;
+        }  catch(e) {
+            return 404;
+        }
+    }
+
+}
+
+class SpeechSynthesisSound extends Sound {
+
+    constructor() {
+        super();
+        
+        this.rate  = 0.9;
+        this.pitch = 1.0;
+        this.volume = 1.5;
+        this.lang  = 'en-GB';  //(日本語:ja-JP, アメリカ英語:en-US, イギリス英語:en-GB, 中国語:zh-CN, 韓国語:ko-KR)
+        this.voice = null;
+    }
+    
+    isLoaded() {
+        // It takes a few seconds to load the voice.
+        if (this.voice != null) {
+            return true;
+        }
+        
+        let voice = null;
+        let voices = speechSynthesis.getVoices();
+        if(!voices || !voices.length){
+            return false;
+        }
+        voices.some(function(v, i){
+            if(v.name == 'Google UK English Male') {
+                voice = v;
+                return true;
+            }
+        });
+        this.voice = voice;
+        return false;
+    }
+
+    getSpeechSynthesisUtterance() {
+        let speak = new SpeechSynthesisUtterance();
+        speak.rate  = this.rate;
+        speak.pitch = this.pitch;
+        speak.lang  = this.lang;
+        if (this.voice != null) {
+            speak.voice = this.voice;
+        }
+        let obj = this;
+        speak.addEventListener("start", function() {
+            obj.trigger("start");
+        }, false);
+        speak.addEventListener("end", function() {
+            obj.trigger("next");
+        }, false);
+
+        return speak;
+    }
+
+    call(sentence) {
+        let speak = this.getSpeechSynthesisUtterance();
+        speak.text = sentence;
+        speechSynthesis.speak(speak);
+
+        // call is success
+        return true;
+    }
+
+}
+
+class VoiceSound extends Sound {
+
+    constructor() {
+        super();
+        this.sound = new Audio();
+        let obj = this;
+        this.sound.addEventListener("play", function() {
+            obj.trigger("start");
+        }, false);
+        this.sound.addEventListener("ended", function() {
+            obj.trigger("next");
+        }, false);
+    }
+
+    call(content) {
+        let url = chrome.runtime.getURL(`/voice/${content}.mp3`);
+        let status = this.canLoad(url);
+        console.log("url:", url);
+        console.log("status:", status);
+        if (status == 200) {
+            this.sound.src = url;
+            this.sound.play();
+        } else {
+            // call error
+            return false;
+        }
+        
+        // call is success
+        return true;
+    }
+
+}
+
 class Caller {
 
     static PLAYER1 = 1;
@@ -12,6 +143,8 @@ class Caller {
     constructor() {
         this.init();
         this.prev_legs = "";
+        this.isCalling = false;
+        this.queue = [];
     }
     
     /* ======================== */
@@ -171,18 +304,6 @@ class Caller {
         
         return true;
     }
-
-    canLoad(_url) {
-        try {
-            let xhr;
-            xhr = new XMLHttpRequest();
-            xhr.open("HEAD", _url, false);  //同期モード
-            xhr.send(null);
-            return xhr.status;
-        }  catch(e) {
-            return 404;
-        }
-    }
     
     isFirstLeg() {
         let legs = this.getLegs();
@@ -220,10 +341,6 @@ class SpeechCaller extends Caller {
 
     constructor() {
         super();
-        this.rate  = 0.80;
-        this.pitch = 1;
-        this.lang  = 'en-GB';  //(日本語:ja-JP, アメリカ英語:en-US, イギリス英語:en-GB, 中国語:zh-CN, 韓国語:ko-KR)
-        this.voice = null;
     }
 
     init() {
@@ -231,24 +348,7 @@ class SpeechCaller extends Caller {
     }
     
     isLoaded() {
-        // It takes a few seconds to load the voice.
-        if (this.voice != null) {
-            return true;
-        }
-        
-        let voice = null;
-        let voices = speechSynthesis.getVoices();
-        if(!voices || !voices.length){
-            return false;
-        }
-        voices.some(function(v, i){
-            if(v.name == 'Google UK English Male') {
-                voice = v;
-                return true;
-            }
-        });
-        this.voice = voice;
-        return false;
+        return true;
     }
     
     getSpeechSynthesisUtterance() {
@@ -274,7 +374,7 @@ class SpeechCaller extends Caller {
         this.call(speak);
     }
     
-    callGameShot (player) {
+    callGameShot(player) {
         let speak = this.getSpeechSynthesisUtterance();
         speak.rate  = 0.50;
         speak.volume = 1.50;
@@ -312,43 +412,45 @@ class SoundCaller extends Caller {
 
     constructor() {
         super();
-        this.queue = [];
-        this.sound = new Audio();
         
         let obj = this;
-        this.sound.addEventListener("ended", function() {
-            obj.playSound();
-        }, false);
+        this.sound  = new VoiceSound();
+        this.sound.addEventListener("next", function() {
+            obj.isCalling = false;
+            obj.call();
+        });
     }
     
     init() {
         super.init();
     }
     
-    addSound(name) {
-        let url = chrome.runtime.getURL(`/voice/${name}.mp3`);
-        this.queue.push(url);
-        this.playSound();
+    addSound(point) {
+        this.queue.push(point);
+        this.call();
     }
-    playSound() {
-        if (this.sound.src != "" && !this.sound.ended) {
+
+    call() {
+        if (this.queue.length <= 0) {
             return;
         }
-        if (this.queue.length > 0) {
-            let url = this.queue.shift();
-            let status = this.canLoad(url);
-            console.log("url:", url);
-            console.log("status:", status);
-            if (status == 200) {
-                this.sound.src = url;
-                // this.sound.load();
-                this.sound.play();
-            }
+        if (this.isCalling) {
+            return;
+        }
+        this.isCalling = true;
+
+        let point = this.queue.shift();
+        let sound;
+        console.log("url:", url);
+        console.log("status:", status);
+        if (!sound.call(point)) {
+            // call is error
+            this.isCalling = false;
         }
     }
 
     callGameOn(p1Name, p2Name) {
-        this.addSound("GameOn");
+        this.addSound("gameon");
     }
     
     callGameShot (player) {
@@ -379,138 +481,6 @@ class SoundCaller extends Caller {
     }
 }
 
-
-class Sound {
-    
-    constructor() {
-        this.listeners = {};
-    }
-    
-    trigger(method, payload = null) {
-        const callback = this.listeners[method];
-        if(typeof callback === 'function'){
-            callback(payload);
-        }
-    }
-    
-    addEventListener(method, callback) {
-        this.listeners[method] = callback;
-    }
-
-    removeEventListener (method) {
-        delete this.listeners[method];
-    }
-
-    canLoad(_url) {
-        try {
-            let xhr;
-            xhr = new XMLHttpRequest();
-            xhr.open("HEAD", _url, false);  //同期モード
-            xhr.send(null);
-            return xhr.status;
-        }  catch(e) {
-            return 404;
-        }
-    }
-
-}
-
-class SpeechSynthesisSound extends Sound {
-
-    constructor() {
-        super();
-        
-        this.rate  = 0.9;
-        this.pitch = 1.0;
-        this.volume = 1.5;
-        this.lang  = 'en-GB';  //(日本語:ja-JP, アメリカ英語:en-US, イギリス英語:en-GB, 中国語:zh-CN, 韓国語:ko-KR)
-        this.voice = null;
-    }
-    
-//    isLoaded() {
-//        // It takes a few seconds to load the voice.
-//        if (this.voice != null) {
-//            return true;
-//        }
-//        
-//        let voice = null;
-//        let voices = speechSynthesis.getVoices();
-//        if(!voices || !voices.length){
-//            return false;
-//        }
-//        voices.some(function(v, i){
-//            if(v.name == 'Google UK English Male') {
-//                voice = v;
-//                return true;
-//            }
-//        });
-//        this.voice = voice;
-//        return false;
-//    }
-
-    getSpeechSynthesisUtterance() {
-        let speak = new SpeechSynthesisUtterance();
-        speak.rate  = this.rate;
-        speak.pitch = this.pitch;
-        speak.lang  = this.lang;
-        if (this.voice != null) {
-            speak.voice = this.voice;
-        }
-        let obj = this;
-        speak.addEventListener("start", function() {
-            obj.trigger("start");
-        }, false);
-        speak.addEventListener("end", function() {
-            obj.trigger("next");
-        }, false);
-
-        return speak;
-    }
-
-    call(sentence) {
-        let speak = this.getSpeechSynthesisUtterance();
-        speak.text = sentence;
-        speechSynthesis.speak(speak);
-
-        // call is success
-        return true;
-    }
-
-}
-
-class VoiceSound extends Sound {
-
-    constructor() {
-        super();
-        this.sound = new Audio();
-        let obj = this;
-        this.sound.addEventListener("play", function() {
-            obj.trigger("start");
-        }, false);
-        this.sound.addEventListener("ended", function() {
-            obj.trigger("next");
-        }, false);
-    }
-
-    call(content) {
-        let url = chrome.runtime.getURL(`/voice/${content}.mp3`);
-        let status = this.canLoad(url);
-        console.log("url:", url);
-        console.log("status:", status);
-        if (status == 200) {
-            this.sound.src = url;
-            this.sound.play();
-        } else {
-            // call error
-            return false;
-        }
-        
-        // call is success
-        return true;
-    }
-
-}
-
 class SoundCallerEx extends SoundCaller {
 
     static SPEECH_SYNTHESIS = 1;
@@ -518,22 +488,10 @@ class SoundCallerEx extends SoundCaller {
 
     constructor() {
         super();
-        this.isCalling = false;
-        this.queue = [];
-        this.speech = new SpeechSynthesisSound();
+
         let obj = this;
-//        this.speech.addEventListener("start", function() {
-//            obj.isCalling = true;
-//        });
+        this.speech = new SpeechSynthesisSound();
         this.speech.addEventListener("next", function() {
-            obj.isCalling = false;
-            obj.call();
-        });
-        this.sound  = new VoiceSound();
-//        this.sound.addEventListener("start", function() {
-//            obj.isCalling = true;
-//        });
-        this.sound.addEventListener("next", function() {
             obj.isCalling = false;
             obj.call();
         });

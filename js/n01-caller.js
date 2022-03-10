@@ -2,6 +2,8 @@
   [[[TODO]]]
 ・発生ON／OFできるようにする。
 ・音声認識版も作る？
+// https://labs.goo.ne.jp/apiid/?code=f78460e5a5a15768b704&state=fc53c548180bebd729277311bbecb8310fe008e5
+// be1ab4c3521aa3be9cc346dad2c82f03c0117a541aa0c2587f02e2a4c6719bbd
 ============================================ */
 
 class Sound {
@@ -341,6 +343,12 @@ class SpeechCaller extends Caller {
 
     constructor() {
         super();
+        
+        this.rate  = 0.9;
+        this.pitch = 1.0;
+        this.volume = 1.5;
+        this.lang  = 'ja-JP';  //(日本語:ja-JP, アメリカ英語:en-US, イギリス英語:en-GB, 中国語:zh-CN, 韓国語:ko-KR)
+        this.voice = null;
     }
 
     init() {
@@ -348,7 +356,24 @@ class SpeechCaller extends Caller {
     }
     
     isLoaded() {
-        return true;
+        // It takes a few seconds to load the voice.
+        if (this.voice != null) {
+            return true;
+        }
+        
+        let voice = null;
+        let voices = speechSynthesis.getVoices();
+        if(!voices || !voices.length){
+            return false;
+        }
+        voices.some(function(v, i){
+            if(v.name == 'Google UK English Male') {
+                voice = v;
+                return true;
+            }
+        });
+        this.voice = voice;
+        return false;
     }
     
     getSpeechSynthesisUtterance() {
@@ -370,7 +395,9 @@ class SpeechCaller extends Caller {
         let speak = this.getSpeechSynthesisUtterance();
         speak.rate  = 0.50;
         speak.volume = 1.50;
-        speak.text = `${p1Name} vs ${p2Name}.Game On!`;
+//        speak.text = `${p1Name} vs ${p2Name}`;
+//        this.call(speak);
+        speak.text = `Game On`;
         this.call(speak);
     }
     
@@ -537,21 +564,21 @@ class SoundCallerEx extends SoundCaller {
     }
 
     callGameOn(p1Name, p2Name) {
-        if(this.isFirstLeg()) {
-            if (p1Name == "Player 1") {
-                this.addSound("player1");
-            } else {
-                this.addSpeechSynthesis(`${p1Name}`);
-            }
-            
-            this.addSpeechSynthesis("vs");
-            
-            if (p2Name == "Player 2") {
-                this.addSound("player2");
-            } else {
-                this.addSpeechSynthesis(`${p2Name}`);
-            }
-        }
+//        if(this.isFirstLeg()) {
+//            if (p1Name == "Player 1") {
+//                this.addSound("player1");
+//            } else {
+//                this.addSpeechSynthesis(`${p1Name}`);
+//            }
+//            
+//            this.addSpeechSynthesis("vs");
+//            
+//            if (p2Name == "Player 2") {
+//                this.addSound("player2");
+//            } else {
+//                this.addSpeechSynthesis(`${p2Name}`);
+//            }
+//        }
         this.addSound("gameon");
     }
 

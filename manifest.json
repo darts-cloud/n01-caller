@@ -1,12 +1,15 @@
 {
   "name": "n01 Caller",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "manifest_version": 3,
-  "description": "n01のサイトで入力された点数を読み上げます。",
+  "description": "n01 web版にcallerを拡張！スコアを入力するとPDCワールドチャンピオンシップ代表選考会でコーラーを務めた\"坪倉初奈\"さんの声でコールします。",
   "content_scripts": [{
     "matches": ["https://nakka.com/n01/*"],
     "js": ["js/jquery-3.6.0.min.js", "js/n01-caller.js"]
   }],
+  "icons" : {
+    "128" : "icon128.png"
+  },
   "web_accessible_resources": [{
     "resources": [ "voice/*.mp3" ],
     "matches": [ "<all_urls>" ]

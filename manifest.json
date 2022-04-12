@@ -1,6 +1,6 @@
 {
   "name": "n01 Caller",
-  "version": "0.1.4",
+  "version": "1.0.1",
   "manifest_version": 3,
   "description": "n01 web版にcallerを拡張！スコアを入力するとPDCワールドチャンピオンシップ代表選考会でコーラーを務めた\"坪倉初奈\"さんの声でコールします。",
   "content_scripts": [{

@@ -161,7 +161,12 @@ class Caller {
     }
     
     getRound() {
-        return $('.input_area').attr("round");
+        let round = $('.input_area').parent().attr("id");
+        if (round == undefined) {
+            return -1;
+        }
+        round = round.replace("round_", "");
+        return round;
     }
     
     getPlayerName(player) {
@@ -170,15 +175,27 @@ class Caller {
     }
     
     getPlayer() {
-        return $('.input_area').attr("player");
+        let player = 0;
+        if( $('.input_area').hasClass('p2score') ) {
+            player = 1;
+        }
+        return player;
     }
     
     getPoint(round, player) {
-        return $(`.score_input[round=${round}][player=${player}]`).text();
+        let pl = "p1score";
+        if (player == "1") {
+            pl = "p2score";
+        }
+        return $(`#round_${round} .score_input.${pl}`).text();
     }
     
     getRequirePoint(round, player) {
-        return $(`.score_left[round=${round-1}][player=${player}]`).text();
+        let pl = "p1left";
+        if (player == "1") {
+            pl = "p2left";
+        }
+        return $(`#round_${round-1} .score_left.${pl}`).text();
     }
     
     isGameshot() {
@@ -218,7 +235,7 @@ class Caller {
     }
 
     init() {
-        this.prev_round = this.getRound();   // 0
+        this.prev_round = this.getRound();   // -1
         this.prev_player = this.getPlayer(); // 0
         this.prev_legs = this.getLegs();
         this.gameShotFlg = false;

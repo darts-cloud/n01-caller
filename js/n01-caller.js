@@ -121,8 +121,8 @@ class VoiceSound extends Sound {
     call(content) {
         let url = chrome.runtime.getURL(`/voice/${content}.mp3`);
         let status = this.canLoad(url);
-        console.log("url:", url);
-        console.log("status:", status);
+        // console.log("url:", url);
+        // console.log("status:", status);
         if (status == 200) {
             this.sound.src = url;
             this.sound.play();
@@ -226,6 +226,27 @@ class Caller {
         return round;
     }
     
+    isMicOn() {
+        if ($('#mic_on').is(':visible')) {
+            return true;
+        }
+        return false;
+    }
+
+    sendScript(code) {
+        var id  = 'fromContentScripts';
+        var elm = document.getElementById(id);
+        if (elm != null) {
+          document.body.removeChild(elm);
+        }
+        elm  = document.createElement('script');
+        elm.type = 'text/javascript';
+        elm.text = '(' + code.toString() + ')();';
+        elm.id   = id;
+        document.body.appendChild(elm);
+        document.body.removeChild(elm);
+    }
+
     /* ======================== */
     /* functions
     /* ======================== */
@@ -333,6 +354,26 @@ class Caller {
         legs = legs.replaceAll(" ", "");
 
         return legs == "";
+    }
+
+    micOff() {
+        if (this.isMicOn()) {
+            document.dispatchEvent( new KeyboardEvent( "keydown",{key: "/" })) ;
+        }
+        // let $mic = this.getMicOn();
+        // if ($mic != null) {
+        //     $mic.trigger('mousedown');
+        // }
+    }
+
+    micOn() {
+        if (!this.isMicOn()) {
+            document.dispatchEvent( new KeyboardEvent( "keydown",{key: "/" })) ;
+        }
+        // let $mic = this.getMicOff();
+        // if ($mic != null) {
+        //     $mic.trigger('mousedown');
+        // }
     }
 
     /* ======================== */
@@ -470,12 +511,14 @@ class SoundCaller extends Caller {
     }
     
     addSound(point) {
+        this.micOff();
         this.queue.push(point);
         this.call();
     }
 
     call() {
         if (this.queue.length <= 0) {
+            this.micOn();
             return;
         }
         if (this.isCalling) {
@@ -484,9 +527,9 @@ class SoundCaller extends Caller {
         this.isCalling = true;
 
         let point = this.queue.shift();
-        let sound;
-        console.log("url:", url);
-        console.log("status:", status);
+        let sound = this.sound;
+        // console.log("url:", url);
+        // console.log("status:", status);
         if (!sound.call(point)) {
             // call is error
             this.isCalling = false;
@@ -607,8 +650,8 @@ class SoundCallerEx extends SoundCaller {
 
 $(function(){
     // let caller = new SpeechCaller();
-    // let caller = new SoundCaller();
-    let caller = new SoundCallerEx();
+    let caller = new SoundCaller();
+    // let caller = new SoundCallerEx();
 
     setInterval(function() {
         caller.analsys();

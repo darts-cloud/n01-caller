@@ -146,6 +146,7 @@ class Caller {
         this.init();
         this.prev_legs = "";
         this.isCalling = false;
+        this.isMifOffFlg = false;
         this.queue = [];
     }
     
@@ -226,25 +227,27 @@ class Caller {
         return round;
     }
     
+    
+    /**
+     * Microphone off judgment
+     * (Immediately after startup, it always returns false.)
+     */
+    isMicOff() {
+        if ($('#mic_off').is(':visible')) {
+            return true;
+        }
+        return false;
+    }
+    
+    /**
+     * Microphone on judgment
+     * (Immediately after startup, it always returns false.)
+     */
     isMicOn() {
         if ($('#mic_on').is(':visible')) {
             return true;
         }
         return false;
-    }
-
-    sendScript(code) {
-        var id  = 'fromContentScripts';
-        var elm = document.getElementById(id);
-        if (elm != null) {
-          document.body.removeChild(elm);
-        }
-        elm  = document.createElement('script');
-        elm.type = 'text/javascript';
-        elm.text = '(' + code.toString() + ')();';
-        elm.id   = id;
-        document.body.appendChild(elm);
-        document.body.removeChild(elm);
     }
 
     /* ======================== */
@@ -358,22 +361,22 @@ class Caller {
 
     micOff() {
         if (this.isMicOn()) {
+            console.log("micoff");
             document.dispatchEvent( new KeyboardEvent( "keydown",{key: "/" })) ;
+        } else {
+            this.isMifOffFlg = true;
         }
-        // let $mic = this.getMicOn();
-        // if ($mic != null) {
-        //     $mic.trigger('mousedown');
-        // }
     }
 
     micOn() {
-        if (!this.isMicOn()) {
+        if (this.isMifOffFlg) {
+            this.isMifOffFlg = false;
+            return;
+        }
+        if (this.isMicOff()) {
+            console.log("micon");
             document.dispatchEvent( new KeyboardEvent( "keydown",{key: "/" })) ;
         }
-        // let $mic = this.getMicOff();
-        // if ($mic != null) {
-        //     $mic.trigger('mousedown');
-        // }
     }
 
     /* ======================== */

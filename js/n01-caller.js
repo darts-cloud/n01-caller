@@ -141,12 +141,15 @@ class Caller {
 
     static PLAYER1 = 1;
     static PLAYER2 = 2;
+    static MICMODE_NONE = -1;
+    static MICMODE_ON   =  1;
+    static MICMODE_OFF  =  0;
     
     constructor() {
         this.init();
         this.prev_legs = "";
         this.isCalling = false;
-        this.isMifOffFlg = false;
+        this.MicMode = Caller.MICMODE_NONE;
         this.queue = [];
     }
     
@@ -360,23 +363,31 @@ class Caller {
     }
 
     micOff() {
+        // console.log("micoff");
         if (this.isMicOn()) {
-            console.log("micoff");
+            // console.log("micoff_run");
+            if (this.MicMode == Caller.MICMODE_NONE) {
+                this.MicMode = Caller.MICMODE_ON;
+            }
             document.dispatchEvent( new KeyboardEvent( "keydown",{key: "/" })) ;
         } else {
-            this.isMifOffFlg = true;
+            if (this.MicMode == Caller.MICMODE_NONE) {
+                this.MicMode = Caller.MICMODE_OFF;
+            }
         }
     }
 
     micOn() {
-        if (this.isMifOffFlg) {
-            this.isMifOffFlg = false;
+        // console.log("micon");
+        if (this.MicMode == Caller.MICMODE_OFF) {
+            this.MicMode = Caller.MICMODE_NONE;
             return;
         }
         if (this.isMicOff()) {
-            console.log("micon");
+            // console.log("micon_run");
             document.dispatchEvent( new KeyboardEvent( "keydown",{key: "/" })) ;
         }
+        this.MicMode = Caller.MICMODE_NONE;
     }
 
     /* ======================== */
@@ -514,13 +525,17 @@ class SoundCaller extends Caller {
     }
     
     addSound(point) {
-        this.micOff();
+        // console.log("addSound");
+        if (this.queue.length <= 0) {
+            this.micOff();
+        }
         this.queue.push(point);
         this.call();
     }
 
     call() {
         if (this.queue.length <= 0) {
+            // console.log("length 0");
             this.micOn();
             return;
         }
@@ -592,17 +607,27 @@ class SoundCallerEx extends SoundCaller {
     }
 
     addSpeechSynthesis(sentence) {
+        // console.log("addSpeechSynthesis");
+        if (this.queue.length <= 0) {
+            this.micOff();
+        }
         this.queue.push([SoundCallerEx.SPEECH_SYNTHESIS, sentence]);
         this.call();
     }
 
     addSound(point) {
+        // console.log("addSound");
+        if (this.queue.length <= 0) {
+            this.micOff();
+        }
         this.queue.push([SoundCallerEx.SOUND, point]);
         this.call();
     }
 
     call() {
         if (this.queue.length <= 0) {
+            // console.log("length 0");
+            this.micOn();
             return;
         }
         if (this.isCalling) {
